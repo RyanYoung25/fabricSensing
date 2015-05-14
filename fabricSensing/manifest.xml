@@ -1,0 +1,15 @@
+<package>
+  <description brief="fabricSensing">
+
+     fabricSensing
+
+  </description>
+  <author>Ryan</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/fabricSensing</url>
+  <depend package="maestor"/>
+
+</package>
+
+
