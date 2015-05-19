@@ -2,7 +2,10 @@
 
 import serial
 import time
+import signal
 from Maestor import maestor
+
+continuing = True
 
 class fabricSensor:
     """A class to represent a fabricSensor sensor that talks 
@@ -62,21 +65,27 @@ class fabricSensor:
                 self.ser.flushOutput()
                 response = self.ser.readline()
                 print response
-                if response.strip() == "up":
-                    self.moveArmUp()
-                    print "Moving Up!"
-                elif response.strip() == "down":
-                    self.moveArmDown()
-                    print "Moving Down!"
+                #if response.strip() == "up":
+                #    self.moveArmUp()
+                #    print "Moving Up!"
+                #elif response.strip() == "down":
+                #    self.moveArmDown()
+                #    print "Moving Down!"
             except Exception, e:
                 print "Error: " + str(e)
 
+def finishDemo(signum, frame):
+    global continuing
+    continuing = False
+
 def mainDemo():
+    global continuing
+    signal.signal(signal.SIGINT, finishDemo)
     demoSensor = fabricSensor()
     continuing = True
     while continuing: 
         demoSensor.readAndRespond()
-        time.sleep(.1)
+        #time.sleep(.1)
 
 if __name__ == '__main__':
     mainDemo()
