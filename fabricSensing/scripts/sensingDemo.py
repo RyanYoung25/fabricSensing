@@ -172,14 +172,18 @@ class fabricSensor:
         #Loop through the input and do the right thing 
         while count < 8:
             val = float(values[count])
-
+            print self.thresholds[count],
+            
             if val > self.thresholds[count]:
                 #Update the threshold TODO: make this better
-                self.thresholds[count] = val - .5
+                self.thresholds[count] = 11 #val - .5
+                
                 #Call the function
                 self.responses[count]()
             #Increment the counter
             count += 1
+
+        print ""
 
 
 def finishDemo(signum, frame):
