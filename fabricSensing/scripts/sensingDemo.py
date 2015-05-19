@@ -2,6 +2,7 @@
 
 import serial
 import time
+import math
 import signal
 from Maestor import maestor
 
@@ -42,10 +43,10 @@ class fabricSensor:
         #Create the maestor object to talk to MAESTOR
         self.robot = maestor()
 
-        self.robot.setProperty("REP", "velocity", .5)
-        self.robot.setProperty("RSP", "velocity", .5)
-        self.robot.setProperty("RSR", "velocity", .5)
-        self.robot.setProperty("RSY", "velocity", .5)
+        self.robot.setProperty("REP", "velocity", .2)
+        self.robot.setProperty("RSP", "velocity", .2)
+        self.robot.setProperty("RSR", "velocity", .2)
+        self.robot.setProperty("RSY", "velocity", .2)
 
         self.robot.setProperty("REP", "position", self.elbowCurrentPos)
         self.robot.setProperty("RSP", "position", self.RSPCurrentPos)
@@ -179,14 +180,21 @@ class fabricSensor:
 
             self.updateAvg(val, count)
 
-            diff = math.fabs(val - self.expAvg[count])
+            diff = val - self.expAvg[count] 
 
 
-            if diff > self.thresholds[count]:                
+
+            if diff > 2:                
+                self.thresholds[count] = self.expAvg[count] + diff / 2
+            
+            print self.thresholds[count],
+            if val > self.thresholds[count]:
+               
                 #Call the function
                 self.responses[count]()
             #Increment the counter
             count += 1
+        print ""
 
     def updateAvg(self, val, count):
         #Simple exponential moving average
