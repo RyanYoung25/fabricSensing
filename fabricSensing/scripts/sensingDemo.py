@@ -52,6 +52,10 @@ class fabricSensor:
         self.robot.setProperty("RSR", "position", self.RSRCurrentPos)
         self.robot.setProperty("RSY", "position", self.RSYCurrentPos)
 
+        #For exponential moving average 
+        self.alpha = .1
+        self.expAvg = [0, 0, 0, 0, 0, 0, 0, 0]
+
 
         #Create a list of the functions to call map to each sensor number
         self.responses = [self.moveElbowUp, self.moveElbowDown, self.doNothing, self.doNothing, self.doNothing, self.doNothing, self.doNothing, self.doNothing ] #self.moveRSYRight, self.moveRSYLeft, self.moveRSRUp, self.moveRSRDown, self.moveRSPUp, self.moveRSPDown]
@@ -173,13 +177,21 @@ class fabricSensor:
         while count < 8:
             val = float(values[count])
 
-            if val > self.thresholds[count]:
-                #Update the threshold TODO: make this better
-                self.thresholds[count] = val - .5
+            self.updateAvg(val, count)
+
+            diff = math.fabs(val - self.expAvg[count])
+
+
+            if diff > self.thresholds[count]:                
                 #Call the function
                 self.responses[count]()
             #Increment the counter
             count += 1
+
+    def updateAvg(self, val, count):
+        #Simple exponential moving average
+        self.expAvg[count] = self.alpha * val + (1 - self.alpha) * self.expAvg[count]
+
 
 
 def finishDemo(signum, frame):
