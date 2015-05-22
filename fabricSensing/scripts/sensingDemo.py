@@ -58,7 +58,7 @@ class fabricSensor:
 
 
         #Create a list of the functions to call map to each sensor number
-        self.responses = [self.moveElbowUp, self.moveElbowDown, self.doNothing, self.doNothing, self.doNothing, self.doNothing, self.doNothing, self.doNothing ] #self.moveRSYRight, self.moveRSYLeft, self.moveRSRUp, self.moveRSRDown, self.moveRSPUp, self.moveRSPDown]
+        self.responses = [self.moveElbowUp, self.doNothing, self.moveElbowDown, self.doNothing, self.doNothing, self.doNothing, self.doNothing, self.doNothing ] #self.moveRSYRight, self.moveRSYLeft, self.moveRSRUp, self.moveRSRDown, self.moveRSPUp, self.moveRSPDown]
         self.thresholds = [2, 2, 2, 2, 2, 2, 2, 2]
         #Open up the serial connection 
         try:
@@ -175,14 +175,8 @@ class fabricSensor:
         count = 0
         #Loop through the input and do the right thing 
         while count < 8:
-            val = float(values[count])
-
-            self.updateAvg(val, count)
-
-            diff = math.fabs(val - self.expAvg[count])
-
-
-            if diff > self.thresholds[count]:                
+            val = int(values[count])
+            if val == 1:                
                 #Call the function
                 self.responses[count]()
             #Increment the counter
