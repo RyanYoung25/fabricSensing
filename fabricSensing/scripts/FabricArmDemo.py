@@ -22,7 +22,7 @@ class fabricSensor:
         self.ser.timeout = timeout
         self.ser.xonxoff = xonxoff
         #Used for movement
-        self.increment = -.1
+        self.increment = -.07
         #Create variables for moving the REP
         self.REPCurrentPos = -.75
         self.REPPosMax = -1.7
@@ -40,23 +40,41 @@ class fabricSensor:
         self.RSYPosMax = -1.35
         self.RSYPosMin = 1.35
         #Create variables for moving the LEP
-        self.LEPCurrentPos = .75
-        self.LEPPosMax = 1.7
-        self.LEPPosMin = .1
+        self.LEPCurrentPos = -.75
+        self.LEPPosMax = -1.7
+        self.LEPPosMin = -.1
+        #Create variables for moving the LSP
+        self.LSPCurrentPos = 0
+        self.LSPPosMax = -1
+        self.LSPPosMin = 1
+        #Create variables for moving the LSR
+        self.LSRCurrentPos = 0
+        self.LSRPosMax = 0
+        self.LSRPosMin = -1.3
+        #Create variables for moving the LSY 
+        self.LSYCurrentPos = 0
+        self.LSYPosMax = 1.35
+        self.LSYPosMin = -1.35
         #Create the maestor object to talk to MAESTOR
         self.robot = maestor()
 
-        self.robot.setProperty("REP", "velocity", .5)
-        self.robot.setProperty("RSP", "velocity", .5)
-        self.robot.setProperty("RSR", "velocity", .5)
-        self.robot.setProperty("RSY", "velocity", .5)
-        self.robot.setProperty("LEP", "velocity", .5)
+        self.robot.setProperty("REP", "velocity", .3)
+        self.robot.setProperty("RSP", "velocity", .3)
+        self.robot.setProperty("RSR", "velocity", .3)
+        self.robot.setProperty("RSY", "velocity", .3)
+        self.robot.setProperty("LEP", "velocity", .3)
+        self.robot.setProperty("LSP", "velocity", .3)
+        self.robot.setProperty("LSR", "velocity", .3)
+        self.robot.setProperty("LSY", "velocity", .3)
 
         self.robot.setProperty("REP", "position", self.REPCurrentPos)
         self.robot.setProperty("RSP", "position", self.RSPCurrentPos)
         self.robot.setProperty("RSR", "position", self.RSRCurrentPos)
         self.robot.setProperty("RSY", "position", self.RSYCurrentPos)
         self.robot.setProperty("LEP", "position", self.LEPCurrentPos)
+        self.robot.setProperty("LSP", "position", self.LSPCurrentPos)
+        self.robot.setProperty("LSR", "position", self.LSRCurrentPos)
+        self.robot.setProperty("LSY", "position", self.LSYCurrentPos)
 
         #Create a list of the functions to call map to each sensor number
         self.responses = [self.moveREPUp, self.moveREPDown, self.moveRSPUp, self.moveRSPDown, self.moveLEPUp, self.moveLEPDown, self.doNothing, self.doNothing ] #self.moveRSYRight, self.moveRSYLeft, self.moveRSRUp, self.moveRSRDown, self.moveRSPUp, self.moveRSPDown]
@@ -139,25 +157,25 @@ class fabricSensor:
             self.RSYCurrentPos = self.RSYPosMin
 
         self.robot.setProperty("RSY", "position", self.RSYCurrentPos)
-        
+		
     def moveLEPUp(self):
-        #Increment the Left Elbow up
+    #Increment the Left Elbow up
         self.LEPCurrentPos += self.increment
 
         if self.LEPCurrentPos < self.LEPPosMax: #less than because it's all negative
             self.LEPCurrentPos = self.LEPPosMax
 
         self.robot.setProperty("LEP", "position", self.LEPCurrentPos)
-        
+		
     def moveLEPDown(self):
-        #Increment the Left Elbow down
+    #Increment the Left Elbow down
         self.LEPCurrentPos -= self.increment
 
         if self.LEPCurrentPos > self.LEPPosMin: #less than because it's all negative
             self.LEPCurrentPos = self.LEPPosMin
 
         self.robot.setProperty("LEP", "position", self.LEPCurrentPos)
-    
+	
     def doNothing(self):
         pass
 
@@ -189,14 +207,15 @@ class fabricSensor:
 
         if len(values) != 8:
             print "Error on serial read string" 
+            print values
             return
 
         count = 0
         #Loop through the input and do the right thing 
         while count < 8:
-            val = bool(values[count])
-
-            if val == True
+            val = float(values[count])
+            
+            if val == True:
                 #Update the threshold TODO: make this better
                 #self.thresholds[count] = val - .5
                 #Call the function
@@ -204,6 +223,25 @@ class fabricSensor:
             #Increment the counter
             count += 1
 
+    def resetVelocity(self):
+        self.robot.setProperty("REP", "velocity", 1)
+        self.robot.setProperty("RSP", "velocity", 1)
+        self.robot.setProperty("RSR", "velocity", 1)
+        self.robot.setProperty("RSY", "velocity", 1)
+        self.robot.setProperty("LEP", "velocity", 1)
+        self.robot.setProperty("LSP", "velocity", 1)
+        self.robot.setProperty("LSR", "velocity", 1)
+        self.robot.setProperty("LSY", "velocity", 1)
+        
+
+        self.robot.setProperty("REP", "position", 0) 
+        self.robot.setProperty("RSP", "position", 0)
+        self.robot.setProperty("RSR", "position", 0)
+        self.robot.setProperty("RSY", "position", 0)
+        self.robot.setProperty("LEP", "position", 0)
+        self.robot.setProperty("LSP", "position", 0)
+        self.robot.setProperty("LSR", "position", 0)
+        self.robot.setProperty("LSY", "position", 0)
 
 def finishDemo(signum, frame):
     global continuing
@@ -217,6 +255,7 @@ def mainDemo():
     while continuing: 
         demoSensor.readAndRespond()
         #time.sleep(.1)
+    demoSensor.resetVelocity()
 
 if __name__ == '__main__':
     mainDemo()
