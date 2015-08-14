@@ -2,6 +2,7 @@
 
 import serial
 import time
+import math
 import signal
 from Maestor import maestor
 
@@ -23,10 +24,10 @@ class fabricSensor:
         self.ser.xonxoff = xonxoff
         #Used for movement
         self.increment = -.1
-        #Create variables for moving the REP
-        self.REPCurrentPos = -.75
-        self.REPPosMax = -1.7
-        self.REPPosMin = -.1
+        #Create variables for moving the elbow
+        self.elbowCurrentPos = -.75
+        self.elbowPosMax = -1.7
+        self.elbowPosMin = -.1
         #Create variables for moving the RSP
         self.RSPCurrentPos = 0
         self.RSPPosMax = -1
@@ -39,27 +40,26 @@ class fabricSensor:
         self.RSYCurrentPos = 0
         self.RSYPosMax = -1.35
         self.RSYPosMin = 1.35
-        #Create variables for moving the LEP
-        self.LEPCurrentPos = .75
-        self.LEPPosMax = 1.7
-        self.LEPPosMin = .1
         #Create the maestor object to talk to MAESTOR
         self.robot = maestor()
 
-        self.robot.setProperty("REP", "velocity", .5)
-        self.robot.setProperty("RSP", "velocity", .5)
-        self.robot.setProperty("RSR", "velocity", .5)
-        self.robot.setProperty("RSY", "velocity", .5)
-        self.robot.setProperty("LEP", "velocity", .5)
+        self.robot.setProperty("REP", "velocity", .2)
+        self.robot.setProperty("RSP", "velocity", .2)
+        self.robot.setProperty("RSR", "velocity", .2)
+        self.robot.setProperty("RSY", "velocity", .2)
 
-        self.robot.setProperty("REP", "position", self.REPCurrentPos)
+        self.robot.setProperty("REP", "position", self.elbowCurrentPos)
         self.robot.setProperty("RSP", "position", self.RSPCurrentPos)
         self.robot.setProperty("RSR", "position", self.RSRCurrentPos)
         self.robot.setProperty("RSY", "position", self.RSYCurrentPos)
-        self.robot.setProperty("LEP", "position", self.LEPCurrentPos)
+
+        #For exponential moving average 
+        self.alpha = .1
+        self.expAvg = [0, 0, 0, 0, 0, 0, 0, 0]
+
 
         #Create a list of the functions to call map to each sensor number
-        self.responses = [self.moveREPUp, self.moveREPDown, self.moveRSPUp, self.moveRSPDown, self.moveLEPUp, self.moveLEPDown, self.doNothing, self.doNothing ] #self.moveRSYRight, self.moveRSYLeft, self.moveRSRUp, self.moveRSRDown, self.moveRSPUp, self.moveRSPDown]
+        self.responses = [self.moveElbowUp, self.doNothing, self.moveElbowDown, self.doNothing, self.doNothing, self.doNothing, self.doNothing, self.doNothing ] #self.moveRSYRight, self.moveRSYLeft, self.moveRSRUp, self.moveRSRDown, self.moveRSPUp, self.moveRSPDown]
         self.thresholds = [2, 2, 2, 2, 2, 2, 2, 2]
         #Open up the serial connection 
         try:
@@ -67,24 +67,24 @@ class fabricSensor:
         except Exception, e:
             print "Serial Connection could not be opened: " + str(e)
 
-    def moveREPUp(self):
-        #Increment the Right Elbow up
-        self.REPCurrentPos += self.increment
+    def moveElbowUp(self):
+        #Increment the Elbow up
+        self.elbowCurrentPos += self.increment
 
-        if self.REPCurrentPos < self.REPPosMax: #less than because it's all negative
-            self.REPCurrentPos = self.REPPosMax
+        if self.elbowCurrentPos < self.elbowPosMax: #less than because it's all negative
+            self.elbowCurrentPos = self.elbowPosMax
 
-        self.robot.setProperty("REP", "position", self.REPCurrentPos)
+        self.robot.setProperty("REP", "position", self.elbowCurrentPos)
 
 
-    def moveREPDown(self):
-        #Increment the Right Elbow down
-        self.REPCurrentPos -= self.increment
+    def moveElbowDown(self):
+        #Increment the Elbow down
+        self.elbowCurrentPos -= self.increment
 
-        if self.REPCurrentPos > self.REPPosMin: #less than because it's all negative
-            self.REPCurrentPos = self.REPPosMin
+        if self.elbowCurrentPos > self.elbowPosMin: #less than because it's all negative
+            self.elbowCurrentPos = self.elbowPosMin
 
-        self.robot.setProperty("REP", "position", self.REPCurrentPos)
+        self.robot.setProperty("REP", "position", self.elbowCurrentPos)
 
 
     def moveRSPUp(self):
@@ -139,25 +139,7 @@ class fabricSensor:
             self.RSYCurrentPos = self.RSYPosMin
 
         self.robot.setProperty("RSY", "position", self.RSYCurrentPos)
-        
-    def moveLEPUp(self):
-        #Increment the Left Elbow up
-        self.LEPCurrentPos += self.increment
 
-        if self.LEPCurrentPos < self.LEPPosMax: #less than because it's all negative
-            self.LEPCurrentPos = self.LEPPosMax
-
-        self.robot.setProperty("LEP", "position", self.LEPCurrentPos)
-        
-    def moveLEPDown(self):
-        #Increment the Left Elbow down
-        self.LEPCurrentPos -= self.increment
-
-        if self.LEPCurrentPos > self.LEPPosMin: #less than because it's all negative
-            self.LEPCurrentPos = self.LEPPosMin
-
-        self.robot.setProperty("LEP", "position", self.LEPCurrentPos)
-    
     def doNothing(self):
         pass
 
@@ -194,15 +176,18 @@ class fabricSensor:
         count = 0
         #Loop through the input and do the right thing 
         while count < 8:
-            val = bool(values[count])
-
-            if val == True
-                #Update the threshold TODO: make this better
-                #self.thresholds[count] = val - .5
+            val = int(values[count])
+            if val == 1:                
                 #Call the function
                 self.responses[count]()
             #Increment the counter
             count += 1
+        print ""
+
+    def updateAvg(self, val, count):
+        #Simple exponential moving average
+        self.expAvg[count] = self.alpha * val + (1 - self.alpha) * self.expAvg[count]
+
 
 
 def finishDemo(signum, frame):
@@ -221,11 +206,3 @@ def mainDemo():
 if __name__ == '__main__':
     mainDemo()
 
-
-
-
-
-
-
-
-        
