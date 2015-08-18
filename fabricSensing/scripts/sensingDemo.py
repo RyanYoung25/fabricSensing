@@ -160,6 +160,9 @@ class fabricSensor:
             except Exception, e:
                 print "Error: " + str(e)
 
+    def cleanUp(self):
+        self.robot.setProperties("RSP REP LEP", "position position position", "0 0 0")
+
 
     def parseString(self, responseString):
         values = responseString.split(" ")
@@ -194,6 +197,7 @@ def mainDemo():
     while continuing: 
         demoSensor.readAndRespond()
         #time.sleep(.1)
+    demoSensor.cleanUp()
 
 if __name__ == '__main__':
     mainDemo()
