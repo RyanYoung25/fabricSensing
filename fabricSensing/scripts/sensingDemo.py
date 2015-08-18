@@ -50,11 +50,13 @@ class fabricSensor:
 
         #Create a list of the functions to call map to each sensor number
         self.responses = [self.moveElbowUp, self.moveElbowDown, self.doNothing, self.doNothing, self.doNothing, self.doNothing, self.doNothing, self.doNothing ] #self.moveRSYRight, self.moveRSYLeft, self.moveRSRUp, self.moveRSRDown, self.moveRSPUp, self.moveRSPDown]
-        self.thresholds = [2, 2, 2, 2, 2, 2, 2, 2]
+        self.thresholds = [False, False, False, False, False, False, False, False]
         self.THRESHOLD = 2.5
         #Create a list of previous values, This will be used to calculate the local slope at each step
         # which is our analog to the derivative.
-        self.history = [0, 0, 0, 0, 0, 0, 0, 0] 
+        self.history = [0, 0, 0, 0, 0, 0, 0, 0]
+        self.smoothing = [1, 1, 1, 1, 1, 1, 1, 1]
+        self.alpha = .3 
         #Open up the serial connection 
         try:
             self.ser.open()
@@ -184,13 +186,17 @@ class fabricSensor:
         if value == 0:  
             return False
 
-        difference = value - self.history[index] #The derivative 
+        difference = value - self.smoothing[index] #The derivative 
         self.history[index] = value #Update the history
+        
+        self.smoothing[index] = self.alpha * value + (1 - self.alpha)*self.smoothing[index] #Exponential Moving Average
 
         if difference > self.THRESHOLD:
-            self.threshold[index] = value - 1
+            self.thresholds[index] = True
+        if difference < -self.THRESHOLD:
+            self.thresholds[index] = False
 
-        return (value > self.threshold[index])
+        return self.thresholds[index]
 
 
     def parseString(self, responseString):
@@ -217,6 +223,8 @@ class fabricSensor:
                 self.responses[count]()
             #Increment the counter
             count += 1
+
+        print self.smoothing
 
     def cleanUp(self):
         '''
