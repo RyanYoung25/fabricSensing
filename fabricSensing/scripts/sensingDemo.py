@@ -189,12 +189,16 @@ class fabricSensor:
         difference = value - self.smoothing[index] #The derivative 
         self.history[index] = value #Update the history
         
-        self.smoothing[index] = self.alpha * value + (1 - self.alpha)*self.smoothing[index] #Exponential Moving Average
+        
 
+        #If the difference is larger than the normal threshold then say we have a touch. 
         if difference > self.THRESHOLD:
             self.thresholds[index] = True
-        if difference < -self.THRESHOLD:
+        else:
             self.thresholds[index] = False
+            #Only add the moving average if we don't think there is a touch. 
+            self.smoothing[index] = self.alpha * value + (1 - self.alpha)*self.smoothing[index] #Exponential Moving Average
+
 
         return self.thresholds[index]
 
