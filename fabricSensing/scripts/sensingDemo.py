@@ -49,13 +49,13 @@ class fabricSensor:
 
 
         #Create a list of the functions to call map to each sensor number
-        self.responses = [self.moveElbowUp, self.moveElbowDown, self.doNothing, self.doNothing, self.doNothing, self.doNothing, self.doNothing, self.doNothing ] #self.moveRSYRight, self.moveRSYLeft, self.moveRSRUp, self.moveRSRDown, self.moveRSPUp, self.moveRSPDown]
+        self.responses = [self.moveElbowUp, self.moveElbowDown, self.doNothing, self.doNothing, self.moveLEPUp, self.moveLEPDown, self.doNothing, self.doNothing ] #self.moveRSYRight, self.moveRSYLeft, self.moveRSRUp, self.moveRSRDown, self.moveRSPUp, self.moveRSPDown]
         self.thresholds = [False, False, False, False, False, False, False, False]
-        self.THRESHOLD = 2.5
+        self.THRESHOLD = 2
         #Create a list of previous values, This will be used to calculate the local slope at each step
         # which is our analog to the derivative.
         self.history = [0, 0, 0, 0, 0, 0, 0, 0]
-        self.smoothing = [1, 1, 1, 1, 1, 1, 1, 1]
+        self.smoothing = [6, 6, 6, 6, 6, 6, 6, 6]
         self.alpha = .3 
         #Open up the serial connection 
         try:
@@ -82,6 +82,7 @@ class fabricSensor:
                 while count < 8:
                     val = float(currentValues[count])
                     self.history[count] = val
+                    #self.smoothing[count] = val
                     count += 1
                 
             except Exception, e:
@@ -137,7 +138,7 @@ class fabricSensor:
         if self.LEPCurrentPos < self.LEPPosMax: #less than because it's all negative
             self.LEPCurrentPos = self.LEPPosMax
 
-        self.robot.setProperty("RSR", "position", self.LEPCurrentPos)
+        self.robot.setProperty("LEP", "position", self.LEPCurrentPos)
 
 
     def moveLEPDown(self):
@@ -146,7 +147,7 @@ class fabricSensor:
         if self.LEPCurrentPos > self.LEPPosMin: #less than because it's all negative
             self.LEPCurrentPos = self.LEPPosMin
 
-        self.robot.setProperty("RSR", "position", self.LEPCurrentPos)
+        self.robot.setProperty("LEP", "position", self.LEPCurrentPos)
 
 
 
@@ -192,7 +193,7 @@ class fabricSensor:
         
 
         #If the difference is larger than the normal threshold then say we have a touch. 
-        if difference > self.THRESHOLD:
+        if difference > self.THRESHOLD or value >= 11:
             self.thresholds[index] = True
         else:
             self.thresholds[index] = False
