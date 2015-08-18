@@ -74,13 +74,7 @@ void loop() {
   total[7] = block7.capacitiveSensor(SAMPLES); // 7
   
   if (!getLogTotal()) {
-    printValues(logTotal);
-    //getLogTotalEMA();
-    //printValues(logTotalEMA);
-    //getHold();
-    //getTouch(threshold);
-    //printTouch();
-    
+    printValues(logTotal);    
   }
     
   // Arbitrary delay
@@ -108,37 +102,4 @@ long getLogTotal(void) {
   return 0;
 }
 
-void getLogTotalEMA(void) {
-  for (int i = 0; i < NOPS; i++) {
-    logTotalEMA[i] = a * logTotal[i] + (1 - a) * logTotalEMA[i];
-  }
-}
-
-void getHold(void) {
-  for (int i = 0; i < NOPS; i++) {
-    if (logTotal[i] - logTotalEMA[i] > diff) {
-      hold[i] = logTotalEMA[i] + (logTotal[i] - logTotalEMA[i]) / 2.0;
-    }
-  }
-}
-
-void getTouch(float *input) {
-  for (int i = 0; i < NOPS; i++) {
-    isTouched[i] = (logTotal[i] > input[i]);
-  }
-}
-
-void getTouch(float input) {
-  for (int i = 0; i < NOPS; i++) {
-    isTouched[i] = (logTotal[i] > input);
-  }
-}
-
-void printTouch(void) {
-  for (int i = 0; i < NOPS-1; i++) {
-    Serial.print(isTouched[i]);
-    Serial.print(sep);
-  }
-  Serial.println(isTouched[NOPS-1]);
-}
 

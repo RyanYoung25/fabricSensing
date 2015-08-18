@@ -31,14 +31,11 @@ class fabricSensor:
         self.RSPCurrentPos = 0
         self.RSPPosMax = -1
         self.RSPPosMin = 1
-        #Create variables for moving the RSR
-        self.RSRCurrentPos = 0
-        self.RSRPosMax = -1.3
-        self.RSRPosMin = 0
-        #Create variables for moving the RSY 
-        self.RSYCurrentPos = 0
-        self.RSYPosMax = -1.35
-        self.RSYPosMin = 1.35
+        #Create variables for moving the LEP
+        self.LEPCurrentPos = -.75
+        self.LEPPosMax = -1.7
+        self.LEPPosMin = -.1
+
         #Create the maestor object to talk to MAESTOR
         self.robot = maestor()
 
@@ -56,11 +53,45 @@ class fabricSensor:
         #Create a list of the functions to call map to each sensor number
         self.responses = [self.moveElbowUp, self.moveElbowDown, self.doNothing, self.doNothing, self.doNothing, self.doNothing, self.doNothing, self.doNothing ] #self.moveRSYRight, self.moveRSYLeft, self.moveRSRUp, self.moveRSRDown, self.moveRSPUp, self.moveRSPDown]
         self.thresholds = [2, 2, 2, 2, 2, 2, 2, 2]
+        self.THRESHOLD = 2.5
+        #Create a list of previous values, This will be used to calculate the local slope at each step
+        # which is our analog to the derivative.
+        self.history = [0, 0, 0, 0, 0, 0, 0, 0] 
         #Open up the serial connection 
         try:
             self.ser.open()
+            self.initializeHistory()
         except Exception, e:
             print "Serial Connection could not be opened: " + str(e)
+
+
+    def initialiseHistory(self):
+        '''
+        Read values from serial and start this as the first history values
+        '''
+        if self.ser.isOpen():
+            try:
+                #Try to read
+                self.ser.flushOutput()
+                response = self.ser.readline()
+                #Once the line is read we can parse the string and initalize the data
+                currentValues = response.split(" ")
+
+                count = 0
+                #Loop through the input and set the history
+                while count < 8:
+                    val = float(values[count])
+                    self.history[count] = val
+                    count += 1
+                
+            except Exception, e:
+                print "Error: " + str(e)
+
+    '''
+    Here begins the functions that move the joints on hubo. 
+    There probably could be a better way of compressing these but for now 
+    it works. They all do the same thing and for incrementing work. 
+    '''
 
     def moveElbowUp(self):
         #Increment the Elbow up
@@ -100,47 +131,32 @@ class fabricSensor:
 
         self.robot.setProperty("RSP", "position", self.RSPCurrentPos)
 
-    def moveRSRUp(self):
-        self.RSRCurrentPos += self.increment
+    def moveLEPUp(self):
+        self.LEPCurrentPos += self.increment
 
-        if self.RSRCurrentPos < self.RSRPosMax: #less than because it's all negative
-            self.RSRCurrentPos = self.RSRPosMax
+        if self.LEPCurrentPos < self.LEPPosMax: #less than because it's all negative
+            self.LEPCurrentPos = self.LEPPosMax
 
-        self.robot.setProperty("RSR", "position", self.RSRCurrentPos)
-
-
-    def moveRSRDown(self):
-        self.RSRCurrentPos -= self.increment
-
-        if self.RSRCurrentPos > self.RSRPosMin: #less than because it's all negative
-            self.RSRCurrentPos = self.RSRPosMin
-
-        self.robot.setProperty("RSR", "position", self.RSRCurrentPos)
+        self.robot.setProperty("RSR", "position", self.LEPCurrentPos)
 
 
-    def moveRSYRight(self):
-        self.RSYCurrentPos -= self.increment
+    def moveLEPDown(self):
+        self.LEPCurrentPos -= self.increment
 
-        if self.RSYCurrentPos < self.RSYPosMax: #less than because it's all negative
-            self.RSYCurrentPos = self.RSYPosMax
+        if self.LEPCurrentPos > self.LEPPosMin: #less than because it's all negative
+            self.LEPCurrentPos = self.LEPPosMin
 
-        self.robot.setProperty("RSY", "position", self.RSYCurrentPos)
+        self.robot.setProperty("RSR", "position", self.LEPCurrentPos)
 
 
-    def moveRSYLeft(self):
-        self.RSYCurrentPos += self.increment
-
-        if self.RSYCurrentPos > self.RSYPosMin: #less than because it's all negative
-            self.RSYCurrentPos = self.RSYPosMin
-
-        self.robot.setProperty("RSY", "position", self.RSYCurrentPos)
 
     def doNothing(self):
         pass
 
 
     def readAndRespond(self):
-        """ Read a message from the serial port and 
+        """ 
+        Read a message from the serial port and 
         respond with the correct movement from the robot.
         """
 
@@ -149,19 +165,37 @@ class fabricSensor:
                 #Try to read
                 self.ser.flushOutput()
                 response = self.ser.readline()
+                #Once the line is read we can parse the string and process the data
                 self.parseString(response)
-                print response
-                #if response.strip() == "up":
-                #    self.moveArmUp()
-                #    print "Moving Up!"
-                #elif response.strip() == "down":
-                #    self.moveArmDown()
-                #    print "Moving Down!"
+                
             except Exception, e:
                 print "Error: " + str(e)
 
 
+    def determineTouch(self, value, index):
+        '''
+        Check if the derivative, the rate of change over time, passed
+        a determined threshold. This is the easiest way but we can start
+        to expand this by creating a dynamic threshold.
+        '''
+
+        #If the sensor failed and returns a zero ignore this data point. 
+        if value == 0:  
+            return False
+
+        difference = value - self.history[index] #The derivative 
+        self.history[index] = value #Update the history
+
+        return (difference > self.THRESHOLD)
+
+
     def parseString(self, responseString):
+        '''
+        Parse the serial string from the robot and cast the values 
+        to floats. For each of the floats determine if there was a touch.
+
+        If there was a touch call the corresponding response function.
+        '''
         values = responseString.split(" ")
 
         if len(values) != 8:
@@ -173,13 +207,18 @@ class fabricSensor:
         while count < 8:
             val = float(values[count])
 
-            if val > self.thresholds[count]:
-                #Update the threshold TODO: make this better
-                self.thresholds[count] = val - .5
+            if self.determineTouch(val, count):
                 #Call the function
                 self.responses[count]()
             #Increment the counter
             count += 1
+
+    def cleanUp(self):
+        '''
+        Reset the robot joints back to zero and reset for the next demo.
+        '''
+
+        self.robot.setProperties("RSP REP LEP", "position position position", "0 0 0")
 
 
 def finishDemo(signum, frame):
