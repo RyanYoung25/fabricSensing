@@ -187,7 +187,10 @@ class fabricSensor:
         difference = value - self.history[index] #The derivative 
         self.history[index] = value #Update the history
 
-        return (difference > self.THRESHOLD)
+        if difference > self.THRESHOLD:
+            self.threshold[index] = value - 1
+
+        return (value > self.threshold[index])
 
 
     def parseString(self, responseString):
