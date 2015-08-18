@@ -41,13 +41,11 @@ class fabricSensor:
 
         self.robot.setProperty("REP", "velocity", .5)
         self.robot.setProperty("RSP", "velocity", .5)
-        self.robot.setProperty("RSR", "velocity", .5)
-        self.robot.setProperty("RSY", "velocity", .5)
+        self.robot.setProperty("LEP", "velocity", .5)
 
         self.robot.setProperty("REP", "position", self.elbowCurrentPos)
         self.robot.setProperty("RSP", "position", self.RSPCurrentPos)
-        self.robot.setProperty("RSR", "position", self.RSRCurrentPos)
-        self.robot.setProperty("RSY", "position", self.RSYCurrentPos)
+        self.robot.setProperty("LEP", "position", self.LEPCurrentPos)
 
 
         #Create a list of the functions to call map to each sensor number
@@ -65,7 +63,7 @@ class fabricSensor:
             print "Serial Connection could not be opened: " + str(e)
 
 
-    def initialiseHistory(self):
+    def initializeHistory(self):
         '''
         Read values from serial and start this as the first history values
         '''
@@ -80,7 +78,7 @@ class fabricSensor:
                 count = 0
                 #Loop through the input and set the history
                 while count < 8:
-                    val = float(values[count])
+                    val = float(currentValues[count])
                     self.history[count] = val
                     count += 1
                 
@@ -206,6 +204,7 @@ class fabricSensor:
             return
 
         count = 0
+        print responseString
         #Loop through the input and do the right thing 
         while count < 8:
             val = float(values[count])
