@@ -50,10 +50,11 @@ class fabricSensor:
 
         #Create a list of the functions to call map to each sensor number
         self.responses = [self.moveElbowUp, self.moveElbowDown, self.doNothing, self.doNothing, self.moveLEPUp, self.moveLEPDown, self.doNothing, self.doNothing ] #self.moveRSYRight, self.moveRSYLeft, self.moveRSRUp, self.moveRSRDown, self.moveRSPUp, self.moveRSPDown]
-        self.THRESHOLD = 2
+        self.THRESHOLD = 2.5
         #Create a list of previous values, This will be used to calculate the difference from the basline
         self.smoothing = [6, 6, 6, 6, 6, 6, 6, 6] #Used to make a baseline for what a not touched sensor reads.
-        self.alpha = .3 
+        self.alpha = .3
+        self.AvgCount = 1 
         #Open up the serial connection 
         try:
             self.ser.open()
@@ -190,7 +191,9 @@ class fabricSensor:
             return True
         else:
             #Only add the moving average if we don't think there is a touch. 
-            self.smoothing[index] = self.alpha * value + (1 - self.alpha)*self.smoothing[index] #Exponential Moving Average
+            #self.smoothing[index] = self.alpha * value + (1 - self.alpha)*self.smoothing[index] #Exponential Moving Average
+            self.AvgCount += 1
+            self.smoothing[index] = (value + (self.AvgCount - 1) * self.smoothing[index]) / float(self.AvgCount) #Cumulative moving average            
             return False
 
 
