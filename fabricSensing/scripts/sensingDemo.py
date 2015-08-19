@@ -50,17 +50,13 @@ class fabricSensor:
 
         #Create a list of the functions to call map to each sensor number
         self.responses = [self.moveElbowUp, self.moveElbowDown, self.doNothing, self.doNothing, self.moveLEPUp, self.moveLEPDown, self.doNothing, self.doNothing ] #self.moveRSYRight, self.moveRSYLeft, self.moveRSRUp, self.moveRSRDown, self.moveRSPUp, self.moveRSPDown]
-        self.thresholds = [False, False, False, False, False, False, False, False]
         self.THRESHOLD = 2
-        #Create a list of previous values, This will be used to calculate the local slope at each step
-        # which is our analog to the derivative.
-        self.history = [0, 0, 0, 0, 0, 0, 0, 0]
-        self.smoothing = [6, 6, 6, 6, 6, 6, 6, 6]
+        #Create a list of previous values, This will be used to calculate the difference from the basline
+        self.smoothing = [6, 6, 6, 6, 6, 6, 6, 6] #Used to make a baseline for what a not touched sensor reads.
         self.alpha = .3 
         #Open up the serial connection 
         try:
             self.ser.open()
-            self.initializeHistory()
         except Exception, e:
             print "Serial Connection could not be opened: " + str(e)
 
@@ -81,7 +77,6 @@ class fabricSensor:
                 #Loop through the input and set the history
                 while count < 8:
                     val = float(currentValues[count])
-                    self.history[count] = val
                     #self.smoothing[count] = val
                     count += 1
                 
@@ -187,21 +182,16 @@ class fabricSensor:
         if value == 0:  
             return False
 
-        difference = value - self.smoothing[index] #The derivative 
-        self.history[index] = value #Update the history
-        
-        
-
+        difference = value - self.smoothing[index] #The difference between the value and it's baseline, the moving average
+      
         #If the difference is larger than the normal threshold then say we have a touch. 
         if difference > self.THRESHOLD or value >= 11:
-            self.thresholds[index] = True
+            print "Touch for index: " + str(index)
+            return True
         else:
-            self.thresholds[index] = False
             #Only add the moving average if we don't think there is a touch. 
             self.smoothing[index] = self.alpha * value + (1 - self.alpha)*self.smoothing[index] #Exponential Moving Average
-
-
-        return self.thresholds[index]
+            return False
 
 
     def parseString(self, responseString):
@@ -230,6 +220,7 @@ class fabricSensor:
             count += 1
 
         print self.smoothing
+
 
     def cleanUp(self):
         '''
