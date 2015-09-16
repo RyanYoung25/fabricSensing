@@ -54,6 +54,7 @@ class fabricSensor:
         #Create a list of previous values, This will be used to calculate the difference from the basline
         self.smoothing = [6, 6, 6, 6, 6, 6, 6, 6] #Used to make a baseline for what a not touched sensor reads.
         self.slidingWindows = [[6],[6],[6],[6],[6],[6],[6],[6]]
+        self.triggered = [False, False, False, False, False, False, False, False]
         self.alpha = .3
         self.AvgCount = 1 
         self.maxWindowLength = 25
@@ -233,13 +234,27 @@ class fabricSensor:
         while count < 8:
             val = float(values[count])
 
-            if self.determineTouch(val, count):
-                #Call the function
-                self.responses[count]()
+            self.triggered[count] = self.determineTouch(val, count):
             #Increment the counter
             count += 1
 
-        print self.smoothing
+        #Find the maximum value of the triggered touches and call it's function
+        count = 0
+        maxIndex = -1
+        maxVal = 0
+
+        for trigger in self.triggered:
+            #Check for the maximum triggered sensor
+            if trigger and (float(values[count]) > maxVal:
+                maxIndex = count
+                maxVal = float(values[count])
+
+            count += 1
+
+        if maxIndex != -1:
+            #We found a triggered event
+            self.responses[maxIndex]()
+
 
 
     def cleanUp(self):
