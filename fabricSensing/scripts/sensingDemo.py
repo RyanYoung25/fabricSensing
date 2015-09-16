@@ -50,11 +50,13 @@ class fabricSensor:
 
         #Create a list of the functions to call map to each sensor number
         self.responses = [self.moveElbowUp, self.moveElbowDown, self.doNothing, self.doNothing, self.moveLEPUp, self.moveLEPDown, self.doNothing, self.doNothing ] #self.moveRSYRight, self.moveRSYLeft, self.moveRSRUp, self.moveRSRDown, self.moveRSPUp, self.moveRSPDown]
-        self.THRESHOLD = 2.5
+        self.THRESHOLD = 2.75
         #Create a list of previous values, This will be used to calculate the difference from the basline
         self.smoothing = [6, 6, 6, 6, 6, 6, 6, 6] #Used to make a baseline for what a not touched sensor reads.
+        self.slidingWindows = [[6],[6],[6],[6],[6],[6],[6],[6]]
         self.alpha = .3
         self.AvgCount = 1 
+        self.maxWindowLength = 25
         #Open up the serial connection 
         try:
             self.ser.open()
@@ -182,8 +184,11 @@ class fabricSensor:
         #If the sensor failed and returns a zero ignore this data point. 
         if value == 0:  
             return False
+        
+        #Get the current avg
+        baseLine = sum(self.slidingWindows[index]) / float(len(self.slidingWindows[index]))
 
-        difference = value - self.smoothing[index] #The difference between the value and it's baseline, the moving average
+        difference = value - baseLine #The difference between the value and it's baseline, the moving average
       
         #If the difference is larger than the normal threshold then say we have a touch. 
         if difference > self.THRESHOLD or value >= 11:
@@ -192,8 +197,20 @@ class fabricSensor:
         else:
             #Only add the moving average if we don't think there is a touch. 
             #self.smoothing[index] = self.alpha * value + (1 - self.alpha)*self.smoothing[index] #Exponential Moving Average
-            self.AvgCount += 1
-            self.smoothing[index] = (value + (self.AvgCount - 1) * self.smoothing[index]) / float(self.AvgCount) #Cumulative moving average            
+            #self.AvgCount += 1
+            #self.smoothing[index] = (value + (self.AvgCount - 1) * self.smoothing[index]) / float(self.AvgCount) #Cumulative moving average            
+            
+            #Add the value to the sliding window if we are below the window len
+
+            if len(self.slidingWindows[index]) < self.maxWindowLength:
+                #Fill the window
+                self.slidingWindows[index].append(value)
+            else:
+                #Pop the first element of the list
+                self.slidingWindows[index].pop(0)
+                #Append the newest value to the end of the window
+                self.slidingWindows[index].append(value)
+            
             return False
 
 
